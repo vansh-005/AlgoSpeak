@@ -1,60 +1,66 @@
+// src/containers/Content/index.jsx
 import React, { useEffect, useState } from 'react';
-import ReactDOM from 'react-dom';
-import Microphone from './components/Microphone';
-import FeedbackPanel from './components/FeedbackPanel';
+import { createRoot } from 'react-dom/client';
+import Microphone     from './components/Microphone';
+import FeedbackPanel  from './components/FeedbackPanel';
 import { LeetcodeProvider } from './context/LeetcodeContext';
-import '../styles/content.scss';
+import '../../styles/content.scss';
 
 const App = () => {
-  const [isActive, setIsActive] = useState(false);
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [feedback, setFeedback] = useState('');
+  const [isRecording, setIsRecording]   = useState(false);  // == Space down
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
+  const [feedback, setFeedback]         = useState('');
 
+  /* ─── Space-bar hold / release ────────────────────────────── */
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const down = e => {
       if (e.code === 'Space' && !e.repeat) {
-        setIsActive(true);
+        setIsRecording(true);
         e.preventDefault();
       }
     };
-
-    const handleKeyUp = (e) => {
+    const up = e => {
       if (e.code === 'Space') {
-        setIsActive(false);
+        setIsRecording(false);        // hides mic
+        setSidebarOpen(true);         // opens panel
         e.preventDefault();
       }
     };
-
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
-    };
+    document.addEventListener('keydown', down);
+    document.addEventListener('keyup',   up);
+    return () => { document.removeEventListener('keydown', down);
+                   document.removeEventListener('keyup',   up); };
   }, []);
 
   return (
     <LeetcodeProvider>
-      {isActive && (
-        <Microphone 
-          onRecordingComplete={(audio) => {
-            // Handle audio processing
-            setSidebarOpen(true);
+      {isRecording && (
+        <Microphone
+          onRecordingComplete={audioBlob => {
+            /* TODO: send audio to backend → setFeedback(response) */
           }}
         />
       )}
+
       <FeedbackPanel
-        isOpen={isSidebarOpen}
-        feedback={feedback}
-        onClose={() => setSidebarOpen(false)}
+        isOpen   ={sidebarOpen}
+        feedback ={feedback}
+        onClose  ={() => setSidebarOpen(false)}
       />
     </LeetcodeProvider>
   );
 };
 
-// Inject into LeetCode page
-const root = document.createElement('div');
-root.id = 'algo-speak-root';
-document.body.appendChild(root);
-ReactDOM.render(<App />, root);
+/* mount */
+const host = document.createElement('div');
+host.id = 'algo-speak-root';
+document.body.appendChild(host);
+createRoot(host).render(<App />);
+
+console.log('[AlgoSpeak] sending inject-styles');
+chrome.runtime.sendMessage({ type: 'inject-styles' }, res =>
+  console.log('[AlgoSpeak] response', res, chrome.runtime.lastError)
+);
+
+/* inject the extracted CSS — keep this line */
+chrome.runtime.sendMessage({ type: 'inject-styles' });

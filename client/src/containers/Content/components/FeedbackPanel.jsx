@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Microphone from './Microphone';
-import '../../styles/content.scss';
+import '../../../styles/content.scss';
 
 const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
   const [isListening, setIsListening] = useState(false);
@@ -8,7 +8,7 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="feedback-panel">
+    <div className={`feedback-panel ${isOpen ? 'open' : ''}`}>
       <div className="panel-header">
         <h3>AI Feedback</h3>
         <button className="close-btn" onClick={onClose}>
@@ -44,3 +44,4 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
 };
 
 export default FeedbackPanel;
+

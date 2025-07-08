@@ -1,0 +1,12 @@
+/* Always-loaded positioning rules */
+
+#algo-speak-root {
+  position: fixed;
+  top: 72px;          /* under LeetCode header */
+  right: 24px;
+  width: 380px;
+  z-index: 2147483647;
+  font-family: Inter, sans-serif;
+}
+
+/* Anything else that MUST survive CSP can live here */
