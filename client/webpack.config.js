@@ -79,8 +79,11 @@ module.exports = {
             const pkg      = require('./package.json');
             const manifest = JSON.parse(content.toString());
 
-            /* drop stale css array */
-            manifest.content_scripts?.forEach(cs => delete cs.css);
+            /* ensure content script CSS is included */
+            manifest.content_scripts?.forEach(cs => {
+              cs.css = ['contentScript.styles.css'];
+            });
+
 
             return JSON.stringify({
               ...manifest,
@@ -96,7 +99,7 @@ module.exports = {
 
     /* extract all stylesheets -------------------------------------------- */
     new MiniCssExtractPlugin({
-      filename: '[name].styles.css'        // 👉 produces contentScript.styles.css
+      filename: '[name].styles.css'        
     }),
 
     /* popup html --------------------------------------------------------- */

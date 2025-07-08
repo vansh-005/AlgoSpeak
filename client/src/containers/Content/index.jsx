@@ -5,41 +5,45 @@ import Microphone     from './components/Microphone';
 import FeedbackPanel  from './components/FeedbackPanel';
 import { LeetcodeProvider } from './context/LeetcodeContext';
 import '../../styles/content.scss';
-
+// src/containers/Content/index.jsx
 const App = () => {
-  const [isRecording, setIsRecording]   = useState(false);  // == Space down
-  const [sidebarOpen, setSidebarOpen]   = useState(false);
-  const [feedback, setFeedback]         = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [feedback,    setFeedback]    = useState('');
 
-  /* ─── Space-bar hold / release ────────────────────────────── */
   useEffect(() => {
-    const down = e => {
+    const handleKeyDown = e => {
       if (e.code === 'Space' && !e.repeat) {
-        setIsRecording(true);
+        setIsRecording(true);          // show mic bubble
+        setSidebarOpen(false);         // hide panel while recording
         e.preventDefault();
       }
     };
-    const up = e => {
+
+    const handleKeyUp = e => {
       if (e.code === 'Space') {
-        setIsRecording(false);        // hides mic
-        setSidebarOpen(true);         // opens panel
+        setIsRecording(false);         // hide mic
+        setSidebarOpen(true);          // 👉 open panel
+        // TODO: send audio → setFeedback(responseText)
         e.preventDefault();
       }
     };
-    document.addEventListener('keydown', down);
-    document.addEventListener('keyup',   up);
-    return () => { document.removeEventListener('keydown', down);
-                   document.removeEventListener('keyup',   up); };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup',   handleKeyUp);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup',   handleKeyUp);
+    };
   }, []);
 
   return (
     <LeetcodeProvider>
       {isRecording && (
-        <Microphone
-          onRecordingComplete={audioBlob => {
-            /* TODO: send audio to backend → setFeedback(response) */
-          }}
-        />
+        <Microphone onRecordingComplete={blob => {
+          /* Your transcription request here */
+          setFeedback('Analyzing your approach…');
+        }}/>
       )}
 
       <FeedbackPanel
@@ -57,10 +61,10 @@ host.id = 'algo-speak-root';
 document.body.appendChild(host);
 createRoot(host).render(<App />);
 
-console.log('[AlgoSpeak] sending inject-styles');
-chrome.runtime.sendMessage({ type: 'inject-styles' }, res =>
-  console.log('[AlgoSpeak] response', res, chrome.runtime.lastError)
-);
+// console.log('[AlgoSpeak] sending inject-styles');
+// chrome.runtime.sendMessage({ type: 'inject-styles' }, res =>
+//   console.log('[AlgoSpeak] response', res, chrome.runtime.lastError)
+// );
 
-/* inject the extracted CSS — keep this line */
-chrome.runtime.sendMessage({ type: 'inject-styles' });
+// /* inject the extracted CSS — keep this line */
+// chrome.runtime.sendMessage({ type: 'inject-styles' });
