@@ -34,7 +34,7 @@ const Microphone = ({ onRecordingComplete }) => {
         const rms = Math.sqrt(dataArray.reduce((s, v) => {
           const n = v - 128; return s + n*n;
         }, 0) / dataArray.length);
-        setVolume(Math.min(rms / 50, 1));   // normalise
+        setVolume(Math.min(rms / 50, 1));  
         raf = requestAnimationFrame(loop);
       };
       loop();
@@ -42,7 +42,7 @@ const Microphone = ({ onRecordingComplete }) => {
 
     return () => {
       cancelAnimationFrame(raf);
-      mediaRecorder.current?.stop();   // triggers onstop
+      mediaRecorder.current?.stop();   
     };
   }, []);
 
