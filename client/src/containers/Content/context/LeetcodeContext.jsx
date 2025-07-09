@@ -9,6 +9,8 @@ export const LeetcodeProvider = ({ children }) => {
     const extractProblemData = () => {
       try {
         const title = document.querySelector('[data-cy="question-title"]')?.textContent || '';
+                const number = title.match(/^(\d+)/)?.[1] || null;
+
         const description = document.querySelector('.content__u3I1')?.innerText || '';
         const constraints = Array.from(document.querySelectorAll('.question-content__JfgR p'))
           .map(p => p.textContent)
@@ -24,6 +26,7 @@ export const LeetcodeProvider = ({ children }) => {
         return {
           title,
           description,
+                    number,
           constraints,
           code,
           url: window.location.href

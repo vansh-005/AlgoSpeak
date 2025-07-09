@@ -1,7 +1,9 @@
 // src/containers/Content/components/Microphone.jsx
 import React, { useEffect, useRef, useState } from 'react';
+import Lottie from 'react-lottie';
+import animationData from './mic-animation.json';
 
-const Microphone = ({ onRecordingComplete }) => {
+const Microphone = ({ onRecordingComplete, className = '', size = 56 }) => {
   const [volume, setVolume] = useState(0);          // 0-1
   const mediaRecorder = useRef(null);
   const audioChunks   = useRef([]);
@@ -48,12 +50,16 @@ const Microphone = ({ onRecordingComplete }) => {
 
   return (
     <button
-      className="algo-mic-btn"
-      style={{ '--scale': 1 + volume * 0.4 }}
+      className={`algo-mic-btn ${className}`}
+      style={{ '--scale': 1 + volume * 0.4, '--size': `${size}px` }}
       aria-label="Recording…"
     >
-      <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zM11 21h2v-3h-2v3z"/></svg>
-      <span className="pulse-ring"/>
+      <Lottie
+        options={{ animationData, loop: true, autoplay: true }}
+        height={size - 10}
+        width={size - 10}
+      />
+      <span className="pulse-ring" />
     </button>
   );
 };

@@ -13,15 +13,15 @@ const App = () => {
 
   useEffect(() => {
     const handleKeyDown = e => {
-      if (e.code === 'Space' && !e.repeat) {
+      if (e.code === 'Space' && !e.repeat && !sidebarOpen) {
         setIsRecording(true);          // show mic bubble
-        setSidebarOpen(false);         // hide panel while recording
+        // setSidebarOpen(false);         // hide panel while recording
         e.preventDefault();
       }
     };
 
     const handleKeyUp = e => {
-      if (e.code === 'Space') {
+     if (e.code === 'Space' && !sidebarOpen) {
         setIsRecording(false);         // hide mic
         setSidebarOpen(true);          // 👉 open panel
         // TODO: send audio → setFeedback(responseText)

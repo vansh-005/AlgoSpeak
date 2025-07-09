@@ -1,107 +1,52 @@
-// src/containers/Content/components/FeedbackPanel.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import Microphone from './Microphone';
 import '../../../styles/content.scss';
+import { LeetcodeContext } from '../context/LeetcodeContext';
+import logo from '../../../assets/logo.jpg';
 
 const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
   const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [inputValue, setInputValue] = useState('');
   const [position, setPosition] = useState({ x: window.innerWidth - 420, y: 60 });
   const [size, setSize] = useState({ width: 400, height: 500 });
+
   const panelRef = useRef(null);
   const resizeHandleRef = useRef(null);
   const isResizing = useRef(false);
   const isDragging = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
   const startSize = useRef({ width: 0, height: 0 });
+  const inputRef = useRef(null);
 
-  // Sample AI response with code blocks
-  const sampleResponse = `
-Great job attempting the "Two Sum" problem! Here's how we can optimize your solution:
+  const problemData = useContext(LeetcodeContext);
 
-**Optimization Suggestions:**
-1. Use a hash map for O(1) lookups
-2. Handle duplicate values
-3. Consider edge cases with negative numbers
-
-**Improved Solution:**
-\`\`\`cpp
-class Solution {
-public:
-    vector<int> twoSum(vector<int>& nums, int target) {
-        unordered_map<int, int> numMap;
-        for (int i = 0; i < nums.size(); i++) {
-            int complement = target - nums[i];
-            if (numMap.find(complement) != numMap.end()) {
-                return {numMap[complement], i};
-            }
-            numMap[nums[i]] = i;
-        }
-        return {};
-    }
-};
-\`\`\`
-
-**Test Cases:**
-\`\`\`
-Case 1:
-Input: nums = [2,7,11,15], target = 9
-Output: [0,1]
-
-Case 2:
-Input: nums = [3,2,4], target = 6
-Output: [1,2]
-
-Case 3:
-Input: nums = [3,3], target = 6
-Output: [0,1]
-\`\`\`
-
-Let me know if you'd like to practice similar problems!
-`;
-
-  // Initialize with welcome message
+  // Cleanup on unmount
   useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      setMessages([
-        {
-          id: 1,
-          role: 'ai',
-          content: "Hello! I'm your LeetCode coach. I'll help analyze your solutions and suggest improvements. 🚀"
-        }
-      ]);
-    }
-  }, [isOpen]);
-
-  // Handle AI responses
-  useEffect(() => {
-    if (feedback) {
-      // Simulate AI "typing" effect
-      setIsSpeaking(true);
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          { 
-            id: Date.now(), 
-            role: 'ai', 
-            content: sampleResponse // Replace with actual feedback
-          }
-        ]);
-        setIsSpeaking(false);
-      }, 1500);
-    }
-  }, [feedback]);
-
-  // Handle dragging
-  const handleMouseDown = (e) => {
-    if (e.target.closest('.resize-handle')) return;
-    
-    isDragging.current = true;
-    dragStartPos.current = {
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
+    // eslint-disable-next-line
+  }, []);
+
+  // Autofocus input when typing starts
+  useEffect(() => {
+    if (isTyping && inputRef.current) inputRef.current.focus();
+  }, [isTyping]);
+
+  // -------- DRAG LOGIC --------
+  const handleMouseDown = (e) => {
+    // Only start dragging from panel header (not input, not resize)
+    if (
+      resizeHandleRef.current && resizeHandleRef.current.contains(e.target)
+    ) return;
+    if (e.target.tagName === 'INPUT' || e.target.closest('.input-area')) return;
+
+    isDragging.current = true;
+    dragStartPos.current = { x: e.clientX - position.x, y: e.clientY - position.y };
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   };
@@ -109,8 +54,8 @@ Let me know if you'd like to practice similar problems!
   const handleMouseMove = (e) => {
     if (isDragging.current) {
       setPosition({
-        x: e.clientX - dragStartPos.current.x,
-        y: e.clientY - dragStartPos.current.y
+        x: Math.max(0, Math.min(window.innerWidth - size.width, e.clientX - dragStartPos.current.x)),
+        y: Math.max(0, Math.min(window.innerHeight - 60, e.clientY - dragStartPos.current.y))
       });
     } else if (isResizing.current) {
       const newWidth = Math.max(300, startSize.current.width + (e.clientX - dragStartPos.current.x));
@@ -126,7 +71,7 @@ Let me know if you'd like to practice similar problems!
     document.removeEventListener('mouseup', handleMouseUp);
   };
 
-  // Handle resize start
+  // -------- RESIZE LOGIC --------
   const handleResizeStart = (e) => {
     e.preventDefault();
     isResizing.current = true;
@@ -136,85 +81,99 @@ Let me know if you'd like to practice similar problems!
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  // Format message content with code highlighting
+  // -------- SENDING MESSAGES --------
+  const handleSend = () => {
+    if (!inputValue.trim()) return;
+    setMessages(prev => [
+      ...prev,
+      { id: Date.now(), role: 'user', content: inputValue }
+    ]);
+    setInputValue('');
+    setIsTyping(false);
+
+    // Dummy AI reply example
+    setTimeout(() => {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          role: 'ai',
+          content:
+            "**Sample AI Response:**\n```cpp\nclass Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        unordered_map<int, int> numMap;\n        for (int i = 0; i < nums.size(); i++) {\n            int complement = target - nums[i];\n            if (numMap.find(complement) != numMap.end()) {\n                return {numMap[complement], i};\n            }\n            numMap[nums[i]] = i;\n        }\n        return {};\n    }\n};\n```\nGreat job! Let me know if you want more suggestions."
+        }
+      ]);
+    }, 1000);
+  };
+
+  // -------- CODE BLOCK FORMATTER --------
   const formatContent = (content) => {
+    // split on code blocks
     const parts = content.split(/(```[\s\S]*?```)/g);
-    
-    return parts.map((part, index) => {
+    return parts.map((part, i) => {
       if (part.startsWith('```') && part.endsWith('```')) {
         const code = part.replace(/```(\w+)?\n?|\n?```/g, '');
         const language = part.match(/```(\w+)/)?.[1] || 'javascript';
-        
         return (
-          <pre key={index} className={`code-block language-${language}`}>
-            <code>{code}</code>
-          </pre>
+          <div key={i} className="code-wrapper">
+            <pre className={`code-block language-${language}`}>
+              <code>{code}</code>
+            </pre>
+            <div className="code-actions">
+              <button onClick={() => navigator.clipboard.writeText(code)}>Copy</button>
+              <button
+                onClick={() => {
+                  try {
+                    window.monaco.editor.getModels()[0].setValue(code);
+                  } catch (e) {
+                    alert('Cannot inject code. Monaco not available.');
+                  }
+                }}
+              >
+                Use
+              </button>
+            </div>
+          </div>
         );
       }
-      return <p key={index}>{part}</p>;
+      return <p key={i}>{part}</p>;
     });
   };
 
+  // -------- RENDER --------
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       ref={panelRef}
-      className={`feedback-panel ${isOpen ? 'open' : ''}`}
+      className={`feedback-panel${isOpen ? ' open' : ''}`}
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
         width: `${size.width}px`,
-        height: `${size.height}px`
+        height: `${size.height}px`,
+        position: 'fixed',
+        zIndex: 10010
       }}
       onMouseDown={handleMouseDown}
     >
       <div className="panel-header">
-        <div className="ai-avatar">
-          <div className={`face ${isSpeaking ? 'speaking' : ''}`}>
-            <div className="eyes">
-              <div className="eye"></div>
-              <div className="eye"></div>
-            </div>
-            <div className="mouth"></div>
-          </div>
-        </div>
-        <h3>LeetCode Coach</h3>
+        <img src={logo} className="panel-logo" style={{ width: 32, marginRight: 8 }} alt="Logo" />
+        <h3 style={{ flex: 1, margin: 0 }}>
+          {problemData?.number ? `Problem ${problemData.number}` : 'LeetCode'}
+        </h3>
         <button className="close-btn" onClick={onClose}>
           &times;
         </button>
       </div>
-      
-      <div className="chat-container">
+
+      <div className="chat-container" style={{ overflowY: 'auto', flex: 1 }}>
         {messages.map(message => (
-          <div 
-            key={message.id} 
-            className={`message ${message.role}`}
-          >
-            {message.role === 'ai' && (
-              <div className="avatar">
-                <div className="face-icon">
-                  <div className="eye"></div>
-                  <div className="eye"></div>
-                  <div className="mouth"></div>
-                </div>
-              </div>
-            )}
-            <div className="bubble">
-              {formatContent(message.content)}
-            </div>
+          <div key={message.id} className={`message ${message.role}`}>
+            <div className="bubble">{formatContent(message.content)}</div>
           </div>
         ))}
-        
         {isSpeaking && (
           <div className="message ai">
-            <div className="avatar">
-              <div className="face-icon">
-                <div className="eye"></div>
-                <div className="eye"></div>
-                <div className="mouth"></div>
-              </div>
-            </div>
             <div className="bubble">
               <div className="typing-indicator">
                 <span></span>
@@ -225,32 +184,59 @@ Let me know if you'd like to practice similar problems!
           </div>
         )}
       </div>
-      
-      <div className={`panel-footer ${isListening ? 'listening' : ''}`}>
-        <Microphone 
-          isActive={isListening}
-          onRecordingComplete={(blob) => {
-            console.log('Audio recording complete', blob);
-            setIsListening(false);
-            // Add user message to chat
-            setMessages(prev => [
-              ...prev, 
-              { id: Date.now(), role: 'user', content: 'Audio message transcribed...' }
-            ]);
-          }} 
-        />
-        <button 
-          className="voice-toggle"
-          onClick={() => setIsListening(!isListening)}
-        >
-          {isListening ? 'Stop Listening' : 'Ask Question'}
+
+      <div className={`panel-footer${isListening ? ' listening' : ''}`}>
+        {isListening && (
+          <Microphone
+            className="panel-mic"
+            size={40}
+            isActive={isListening}
+            onRecordingComplete={blob => {
+              setIsListening(false);
+              setMessages(prev => [
+                ...prev,
+                { id: Date.now(), role: 'user', content: 'Audio message transcribed...' }
+              ]);
+            }}
+          />
+        )}
+        {isTyping ? (
+          <div className="input-area">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
+              placeholder="Type your question..."
+              onKeyDown={e => e.key === 'Enter' && handleSend()}
+            />
+            <button className="send-btn" onClick={handleSend}>
+              Send
+            </button>
+          </div>
+        ) : (
+          <button className="type-toggle" onClick={() => setIsTyping(true)}>
+            Type
+          </button>
+        )}
+        <button className="voice-toggle" onClick={() => setIsListening(l => !l)}>
+          {isListening ? 'Stop' : 'Voice'}
         </button>
       </div>
-      
-      <div 
+
+      <div
         className="resize-handle"
         ref={resizeHandleRef}
         onMouseDown={handleResizeStart}
+        style={{
+          position: 'absolute',
+          right: 0,
+          bottom: 0,
+          width: 20,
+          height: 20,
+          cursor: 'nwse-resize',
+          zIndex: 10100
+        }}
       ></div>
     </div>
   );
