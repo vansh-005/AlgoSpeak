@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import Microphone from './Microphone';
+// import Microphone from './Microphone';
 import '../../../styles/content.scss';
 import { LeetcodeContext } from '../context/LeetcodeContext';
-import logo from '../../../assets/logo.jpg';
+// import logo from '@assets/logo.jpg';
 
 const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
-  const [isListening, setIsListening] = useState(false);
+  // const [isListening, setIsListening] = useState(false);
   const [messages, setMessages] = useState([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -14,12 +14,16 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
   const [size, setSize] = useState({ width: 400, height: 500 });
 
   const panelRef = useRef(null);
+  const chatRef = useRef(null);
   const resizeHandleRef = useRef(null);
   const isResizing = useRef(false);
   const isDragging = useRef(false);
   const dragStartPos = useRef({ x: 0, y: 0 });
   const startSize = useRef({ width: 0, height: 0 });
   const inputRef = useRef(null);
+
+  const logoUrl = chrome.runtime.getURL('assets/logo.png');
+
 
   const problemData = useContext(LeetcodeContext);
 
@@ -36,6 +40,13 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
   useEffect(() => {
     if (isTyping && inputRef.current) inputRef.current.focus();
   }, [isTyping]);
+
+    // Scroll to bottom when messages update
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [messages, isSpeaking]);
 
   // -------- DRAG LOGIC --------
   const handleMouseDown = (e) => {
@@ -157,7 +168,7 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
       onMouseDown={handleMouseDown}
     >
       <div className="panel-header">
-        <img src={logo} className="panel-logo" style={{ width: 32, marginRight: 8 }} alt="Logo" />
+        <img src={logoUrl} className="panel-logo" style={{ width: 32, marginRight: 8 }} alt="Logo" />
         <h3 style={{ flex: 1, margin: 0 }}>
           {problemData?.number ? `Problem ${problemData.number}` : 'LeetCode'}
         </h3>
@@ -166,7 +177,7 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
         </button>
       </div>
 
-      <div className="chat-container" style={{ overflowY: 'auto', flex: 1 }}>
+        <div ref={chatRef} className="chat-container" style={{ overflowY: 'auto', flex: 1 }}>
         {messages.map(message => (
           <div key={message.id} className={`message ${message.role}`}>
             <div className="bubble">{formatContent(message.content)}</div>
@@ -185,30 +196,24 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
         )}
       </div>
 
-      <div className={`panel-footer${isListening ? ' listening' : ''}`}>
-        {isListening && (
-          <Microphone
-            className="panel-mic"
-            size={40}
-            isActive={isListening}
-            onRecordingComplete={blob => {
-              setIsListening(false);
-              setMessages(prev => [
-                ...prev,
-                { id: Date.now(), role: 'user', content: 'Audio message transcribed...' }
-              ]);
-            }}
-          />
-        )}
+            <div className="panel-footer">
+        
         {isTyping ? (
           <div className="input-area">
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
+                rows={1}
+              // type="text"
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               placeholder="Type your question..."
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
+              // onKeyDown={e => e.key === 'Enter' && handleSend()}
+                onInput={e => {
+                e.target.style.height = 'auto';
+                e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px';
+              }}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+              style={{ overflow: 'hidden' }}
             />
             <button className="send-btn" onClick={handleSend}>
               Send
@@ -219,9 +224,9 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
             Type
           </button>
         )}
-        <button className="voice-toggle" onClick={() => setIsListening(l => !l)}>
+        {/* <button className="voice-toggle" onClick={() => setIsListening(l => !l)}>
           {isListening ? 'Stop' : 'Voice'}
-        </button>
+        </button> */}
       </div>
 
       <div

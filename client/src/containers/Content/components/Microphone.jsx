@@ -1,7 +1,8 @@
 // src/containers/Content/components/Microphone.jsx
 import React, { useEffect, useRef, useState } from 'react';
-import Lottie from 'react-lottie';
-import animationData from './mic-animation.json';
+// import Lottie from 'react-lottie';
+// import animationData from './mic-animation.json';
+// animation removed - simple pulse icon instead
 
 const Microphone = ({ onRecordingComplete, className = '', size = 56 }) => {
   const [volume, setVolume] = useState(0);          // 0-1
@@ -54,11 +55,13 @@ const Microphone = ({ onRecordingComplete, className = '', size = 56 }) => {
       style={{ '--scale': 1 + volume * 0.4, '--size': `${size}px` }}
       aria-label="Recording…"
     >
-      <Lottie
+      {/* <Lottie
         options={{ animationData, loop: true, autoplay: true }}
         height={size - 10}
         width={size - 10}
-      />
+      /> */}
+            <span className="mic-icon" />
+
       <span className="pulse-ring" />
     </button>
   );

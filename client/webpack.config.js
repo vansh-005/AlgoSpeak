@@ -92,7 +92,7 @@ module.exports = {
             });
           }
         },
-        { from: 'src/assets',              to: 'assets' },
+        { from: 'public/assets',              to: 'assets' },
         { from: 'src/styles/inject.css',   to: '.'     }   // optional: high-level layout css
       ]
     }),
@@ -114,7 +114,7 @@ module.exports = {
     extensions: ['.js', '.jsx', '.scss'],
     alias     : {
       '@containers': path.resolve(__dirname, 'src/containers'),
-      '@assets'    : path.resolve(__dirname, 'src/assets'),
+      '@assets'    : path.resolve(__dirname, 'public/assets'),
       '@styles'    : path.resolve(__dirname, 'src/styles')
     }
   },
