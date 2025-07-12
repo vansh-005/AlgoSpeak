@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mic Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 15px; background: #4285f4; color: white; border: none; border-radius: 4px; }
+        #status { margin-top: 15px; padding: 10px; border-radius: 4px; }
+        .success { background: #e6f4ea; color: #137333; }
+        .error { background: #fce8e6; color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <h2>Microphone Test</h2>
+    <button id="testMic">Test Microphone</button>
+    <div id="status"></div>
+
+    <script>
+        document.getElementById('testMic').addEventListener('click', async () => {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = "Testing...";
+            statusEl.className = "";
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                statusEl.textContent = "✅ Success! Microphone access granted";
+                statusEl.className = "success";
+                
+                // Immediately stop any recording
+                stream.getTracks().forEach(track => track.stop());
+            } catch (err) {
+                statusEl.innerHTML = `❌ Error: <strong>${err.name}</strong><br>${err.message}`;
+                statusEl.className = "error";
+                
+                if (err.name === 'NotAllowedError') {
+                    statusEl.innerHTML += `<br><br>Please:
+                        <ol>
+                            <li>Click the lock icon (🔒) in Chrome's address bar</li>
+                            <li>Select "Site settings"</li>
+                            <li>Change "Microphone" to "Allow"</li>
+                            <li>Refresh this page and try again</li>
+                        </ol>`;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

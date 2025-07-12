@@ -106,7 +106,8 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './src/pages/Popup/index.html',
       filename: 'popup.html',
-      chunks  : ['popup']
+      chunks  : ['popup'],
+       inject: true
     })
   ],
 

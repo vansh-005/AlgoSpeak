@@ -22,7 +22,11 @@
     }
   ],
 
-  "permissions": ["activeTab", "storage", "scripting"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
   "host_permissions": [
     "https://leetcode.com/*",
     "https://your-backend-domain.com/*"

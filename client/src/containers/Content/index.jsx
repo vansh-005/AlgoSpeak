@@ -4,12 +4,27 @@ import { createRoot } from 'react-dom/client';
 import Microphone     from './components/Microphone';
 import FeedbackPanel  from './components/FeedbackPanel';
 import { LeetcodeProvider } from './context/LeetcodeContext';
+import { sendAudioToBackend } from '../../api/sendAudio';
 import '../../styles/content.scss';
 // src/containers/Content/index.jsx
+
 const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [feedback,    setFeedback]    = useState('');
+  const [audioUrl,setAudioUrl] = useState(null);
+
+  const handleRecordingComplete = (blob) =>{
+      // console.log('App: handleRecordingComplete called', blob);
+      sendAudioToBackend(blob);
+    setAudioUrl(URL.createObjectURL(blob));
+  }
+  useEffect(() => {
+  if(audioUrl) console.log('App: audioUrl set', audioUrl);
+  return () => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+  }
+}, [audioUrl]);
 
   useEffect(() => {
     const handleKeyDown = e => {
@@ -40,11 +55,12 @@ const App = () => {
   return (
     <LeetcodeProvider>
       {isRecording && (
-        <Microphone onRecordingComplete={blob => {
-          /* Your transcription request here */
-          setFeedback('Analyzing your approach…');
-        }}/>
+        <Microphone onRecordingComplete={handleRecordingComplete}/>
       )}
+        {/* {audioUrl && (
+          <audio controls src = {audioUrl}/>
+        )} */}
+
 
       <FeedbackPanel
         isOpen   ={sidebarOpen}

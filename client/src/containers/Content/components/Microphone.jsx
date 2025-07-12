@@ -26,6 +26,7 @@ const Microphone = ({ onRecordingComplete, className = '', size = 56 }) => {
       mediaRecorder.current.ondataavailable = e => audioChunks.current.push(e.data);
       mediaRecorder.current.onstop = () => {
         const blob = new Blob(audioChunks.current, { type: 'audio/webm' });
+          console.log('Microphone: onstop, blob:', blob);
         onRecordingComplete?.(blob);
         stream.getTracks().forEach(t => t.stop());
       };
@@ -48,6 +49,17 @@ const Microphone = ({ onRecordingComplete, className = '', size = 56 }) => {
       mediaRecorder.current?.stop();   
     };
   }, []);
+
+  useEffect(() => {
+  const handleMessage = (request) => {
+    if (request.stream) {
+      const stream = request.stream;
+    }
+  };
+
+  chrome.runtime.onMessage.addListener(handleMessage);
+  return () => chrome.runtime.onMessage.removeListener(handleMessage);
+}, []);
 
   return (
     <button
