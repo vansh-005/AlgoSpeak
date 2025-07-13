@@ -1,17 +1,22 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-// import Microphone from './Microphone';
 import '../../../styles/content.scss';
 import { LeetcodeContext } from '../context/LeetcodeContext';
-// import logo from '@assets/logo.jpg';
+import { sendRequestToBackend } from '../../../api/sendRequest.js';
 
-const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
-  // const [isListening, setIsListening] = useState(false);
+const FeedbackPanel = ({
+  isOpen,
+  initialAudioReply,
+  onClose,
+  isCooldown,
+  setIsCooldown
+}) => {
   const [messages, setMessages] = useState([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [position, setPosition] = useState({ x: window.innerWidth - 420, y: 60 });
   const [size, setSize] = useState({ width: 400, height: 500 });
+  const [pendingMessage, setPendingMessage] = useState(null);
 
   const panelRef = useRef(null);
   const chatRef = useRef(null);
@@ -23,9 +28,23 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
   const inputRef = useRef(null);
 
   const logoUrl = chrome.runtime.getURL('assets/logo.png');
-
-
   const problemData = useContext(LeetcodeContext);
+
+  // --- ADD AUDIO REPLY WHEN PANEL OPENS ---
+  useEffect(() => {
+    if (isOpen && initialAudioReply) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now(),
+          role: 'ai',
+          content: initialAudioReply
+        }
+      ]);
+    }
+    // Don't re-add if messages change or initialAudioReply changes after panel is open
+    // eslint-disable-next-line
+  }, [isOpen, initialAudioReply]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -33,15 +52,12 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-    // eslint-disable-next-line
   }, []);
 
-  // Autofocus input when typing starts
   useEffect(() => {
     if (isTyping && inputRef.current) inputRef.current.focus();
   }, [isTyping]);
 
-    // Scroll to bottom when messages update
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -50,12 +66,10 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
 
   // -------- DRAG LOGIC --------
   const handleMouseDown = (e) => {
-    // Only start dragging from panel header (not input, not resize)
     if (
       resizeHandleRef.current && resizeHandleRef.current.contains(e.target)
     ) return;
     if (e.target.tagName === 'INPUT' || e.target.closest('.input-area')) return;
-
     isDragging.current = true;
     dragStartPos.current = { x: e.clientX - position.x, y: e.clientY - position.y };
     document.addEventListener('mousemove', handleMouseMove);
@@ -93,32 +107,45 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
   };
 
   // -------- SENDING MESSAGES --------
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
-    setMessages(prev => [
-      ...prev,
-      { id: Date.now(), role: 'user', content: inputValue }
-    ]);
+  const handleSend = async () => {
+    if (!inputValue.trim() || isCooldown) return;
+
+    const messageId = Date.now();
+    const userMsg = { id: messageId, role: 'user', content: inputValue };
+    setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setIsTyping(false);
+    setIsCooldown(true);
+    setPendingMessage({ id: messageId + 1, role: 'ai', content: 'Processing...' });
+    setIsSpeaking(true);
 
-    // Dummy AI reply example
-    setTimeout(() => {
+    try {
+      const result = await sendRequestToBackend(null, userMsg.content);
+      if (result.success) {
+        setMessages(prev => [
+          ...prev,
+          { id: messageId + 1, role: 'ai', content: result.data.reply || 'No response.' }
+        ]);
+      } else {
+        setMessages(prev => [
+          ...prev,
+          { id: messageId + 1, role: 'ai', content: 'Error: ' + (result.error || 'Unknown error') }
+        ]);
+      }
+    } catch (err) {
       setMessages(prev => [
         ...prev,
-        {
-          id: Date.now() + 1,
-          role: 'ai',
-          content:
-            "**Sample AI Response:**\n```cpp\nclass Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        unordered_map<int, int> numMap;\n        for (int i = 0; i < nums.size(); i++) {\n            int complement = target - nums[i];\n            if (numMap.find(complement) != numMap.end()) {\n                return {numMap[complement], i};\n            }\n            numMap[nums[i]] = i;\n        }\n        return {};\n    }\n};\n```\nGreat job! Let me know if you want more suggestions."
-        }
+        { id: messageId + 1, role: 'ai', content: 'Error: ' + err.message }
       ]);
-    }, 1000);
+    } finally {
+      setIsSpeaking(false);
+      setIsCooldown(false);
+      setPendingMessage(null);
+    }
   };
 
   // -------- CODE BLOCK FORMATTER --------
   const formatContent = (content) => {
-    // split on code blocks
     const parts = content.split(/(```[\s\S]*?```)/g);
     return parts.map((part, i) => {
       if (part.startsWith('```') && part.endsWith('```')) {
@@ -150,7 +177,6 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
     });
   };
 
-  // -------- RENDER --------
   if (!isOpen) return null;
 
   return (
@@ -177,13 +203,14 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
         </button>
       </div>
 
-        <div ref={chatRef} className="chat-container" style={{ overflowY: 'auto', flex: 1 }}>
+      <div ref={chatRef} className="chat-container" style={{ overflowY: 'auto', flex: 1 }}>
         {messages.map(message => (
           <div key={message.id} className={`message ${message.role}`}>
             <div className="bubble">{formatContent(message.content)}</div>
           </div>
         ))}
-        {isSpeaking && (
+        {/* Show processing feedback while waiting */}
+        {isSpeaking && pendingMessage && (
           <div className="message ai">
             <div className="bubble">
               <div className="typing-indicator">
@@ -191,32 +218,36 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
                 <span></span>
                 <span></span>
               </div>
+              <div style={{ marginTop: 8 }}>{pendingMessage.content}</div>
             </div>
           </div>
         )}
       </div>
 
-            <div className="panel-footer">
-        
+      <div className="panel-footer">
         {isTyping ? (
           <div className="input-area">
             <textarea
               ref={inputRef}
-                rows={1}
-              // type="text"
+              rows={1}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               placeholder="Type your question..."
-              // onKeyDown={e => e.key === 'Enter' && handleSend()}
-                onInput={e => {
+              onInput={e => {
                 e.target.style.height = 'auto';
                 e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px';
               }}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
               style={{ overflow: 'hidden' }}
+              disabled={isCooldown}
             />
-            <button className="send-btn" onClick={handleSend}>
-              Send
+            <button
+              className="send-btn"
+              onClick={handleSend}
+              disabled={isCooldown || !inputValue.trim()}
+              style={isCooldown ? { opacity: 0.5, pointerEvents: 'none' } : {}}
+            >
+              {isCooldown ? 'Wait...' : 'Send'}
             </button>
           </div>
         ) : (
@@ -224,9 +255,6 @@ const FeedbackPanel = ({ isOpen, feedback, onClose }) => {
             Type
           </button>
         )}
-        {/* <button className="voice-toggle" onClick={() => setIsListening(l => !l)}>
-          {isListening ? 'Stop' : 'Voice'}
-        </button> */}
       </div>
 
       <div

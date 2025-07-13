@@ -25,11 +25,12 @@
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "http://localhost:5000/"
   ],
   "host_permissions": [
     "https://leetcode.com/*",
-    "https://your-backend-domain.com/*"
+    "http://localhost:5000/*"
   ],
   "web_accessible_resources": [
   {

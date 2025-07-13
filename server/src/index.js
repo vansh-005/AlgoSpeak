@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
@@ -7,58 +8,44 @@ const fs = require('fs');
 const FormData = require('form-data');
 const path = require('path');
 const cors = require('cors');
+const mongoose = require('mongoose');
+const cookieParser = require('cookie-parser');
+const helmet = require('helmet');
 
+const authMiddleware = require('../middleware/auth.js');
+const authRoutes = require('../routes/auth');
+const clientUploadRoutes = require('../routes/clientUploadRoutes.js')
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
+app.use(express.json());
+app.use(helmet());
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:3000", // if you use React dev
+    "jpegdcjffepjnbjpmlgkneghhfangebp", // put your extension ID here
+    "http://localhost:3000",
+    "https://leetcode.com",
 
-// Currently for uploads i am not using any biasing but in future i intented to do that by intial prompt feature of whisper model based on problem metadata and some additional context
-// formData.append('audio_file', fs.createReadStream('user_audio.wav'));
-// formData.append('prompt', "LeetCode, subarray sum equals K, prefix sum, hash map, cumulative sum, O(n), target sum, array, integers");
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type']
+}));
+
+app.use(cookieParser());
+
+// Routes
+
+app.use('/api/auth', authRoutes);
+
+app.use('/api/client-upload', authMiddleware, clientUploadRoutes);
 
 
-app.post('/api/upload', upload.single('audio'), (req, res) => {
-    const webmPath = req.file.path;
-    const wavPath = webmPath + '.wav';
-
-    // Convert webm to wav
-    ffmpeg(webmPath)
-        .toFormat('wav')
-        .on('end', async () => {
-            try {
-                // Prepare form data to send to whisper-server
-                const formData = new FormData();
-                formData.append('file', fs.createReadStream(wavPath));
-
-                // Send POST request to whisper-server (default: localhost:8080)
-                const whisperRes = await axios.post('http://localhost:8080/inference', formData, {
-                    headers: formData.getHeaders(),
-                    maxBodyLength: Infinity
-                });
-                // console.log("Success");
-                // const text = whisperRes.data.text || whisperRes.data;
-                // console.log(text);
-                // Cleanup temp files
-                fs.unlinkSync(webmPath);
-                fs.unlinkSync(wavPath);
-
-                res.json({ transcript: whisperRes.data.text || whisperRes.data });
-            } catch (err) {
-                console.log("Failed");
-                fs.unlinkSync(webmPath);
-                if (fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
-                res.status(500).json({ error: err.message });
-            }
-        })
-        .on('error', (err) => {
-            fs.unlinkSync(webmPath);
-            console.log("Transcription failed");
-            res.status(500).json({ error: 'Audio conversion failed: ' + err.message });
-        })
-        .save(wavPath);
-});
+// MongoDB connection
+mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB Connected!'))
+  .catch(err => console.error('MongoDB connection error:', err));
 
 app.listen(5000, () => console.log('Express server started on http://localhost:5000'));

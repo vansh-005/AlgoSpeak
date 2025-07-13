@@ -1,5 +1,6 @@
 // src/containers/Content/components/Microphone.jsx
 import React, { useEffect, useRef, useState } from 'react';
+// import { useCooldown } from '../context/CooldownContext'
 // import Lottie from 'react-lottie';
 // import animationData from './mic-animation.json';
 // animation removed - simple pulse icon instead
@@ -8,6 +9,8 @@ const Microphone = ({ onRecordingComplete, className = '', size = 56 }) => {
   const [volume, setVolume] = useState(0);          // 0-1
   const mediaRecorder = useRef(null);
   const audioChunks   = useRef([]);
+  // const { isCooldown } = useCooldown();
+
 
   /* ─── start recording immediately ───────────────────────── */
   useEffect(() => {

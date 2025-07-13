@@ -1,86 +1,91 @@
 // src/containers/Content/index.jsx
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import Microphone     from './components/Microphone';
-import FeedbackPanel  from './components/FeedbackPanel';
+import Microphone from './components/Microphone';
+import FeedbackPanel from './components/FeedbackPanel';
 import { LeetcodeProvider } from './context/LeetcodeContext';
-import { sendAudioToBackend } from '../../api/sendAudio';
+import { sendRequestToBackend } from '../../api/sendRequest';
 import '../../styles/content.scss';
-// src/containers/Content/index.jsx
 
 const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [feedback,    setFeedback]    = useState('');
-  const [audioUrl,setAudioUrl] = useState(null);
+  const [feedback, setFeedback] = useState(''); // Not strictly needed, but kept for legacy use
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [isCooldown, setIsCooldown] = useState(false);
+  const [initialAudioReply, setInitialAudioReply] = useState(null); // New
 
-  const handleRecordingComplete = (blob) =>{
-      // console.log('App: handleRecordingComplete called', blob);
-      sendAudioToBackend(blob);
+  const handleRecordingComplete = async (blob) => {
     setAudioUrl(URL.createObjectURL(blob));
-  }
+    setIsCooldown(true);
+    const result = await sendRequestToBackend(blob, '');
+    setIsCooldown(false);
+
+    if (result.success && result.data.reply) {
+      setSidebarOpen(true);
+      // This triggers FeedbackPanel to inject the AI reply as an initial message
+      setInitialAudioReply(result.data.reply);
+    } else {
+      setSidebarOpen(true);
+      setInitialAudioReply('Failed to transcribe audio');
+    }
+  };
+
   useEffect(() => {
-  if(audioUrl) console.log('App: audioUrl set', audioUrl);
-  return () => {
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
-  }
-}, [audioUrl]);
+    // if (audioUrl) console.log('App: audioUrl set', audioUrl);
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    }
+  }, [audioUrl]);
 
   useEffect(() => {
     const handleKeyDown = e => {
-      if (e.code === 'Space' && !e.repeat && !sidebarOpen) {
-        setIsRecording(true);          // show mic bubble
-        // setSidebarOpen(false);         // hide panel while recording
+      if (e.code === 'Space' && !e.repeat && !isCooldown) {
+        setIsRecording(true);
         e.preventDefault();
       }
     };
 
     const handleKeyUp = e => {
-     if (e.code === 'Space' && !sidebarOpen) {
-        setIsRecording(false);         // hide mic
-        setSidebarOpen(true);          // 👉 open panel
-        // TODO: send audio → setFeedback(responseText)
+      if (e.code === 'Space' && !isCooldown) {
+        setIsRecording(false);
+        setSidebarOpen(true);
         e.preventDefault();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup',   handleKeyUp);
+    document.addEventListener('keyup', handleKeyUp);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup',   handleKeyUp);
+      document.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [isCooldown]);
+
+  // Reset initialAudioReply once FeedbackPanel is closed or used
+  const handlePanelClose = () => {
+    setSidebarOpen(false);
+    setInitialAudioReply(null);
+  };
 
   return (
     <LeetcodeProvider>
-      {isRecording && (
-        <Microphone onRecordingComplete={handleRecordingComplete}/>
+      {isRecording && !isCooldown && (
+        <Microphone onRecordingComplete={handleRecordingComplete} />
       )}
-        {/* {audioUrl && (
-          <audio controls src = {audioUrl}/>
-        )} */}
-
 
       <FeedbackPanel
-        isOpen   ={sidebarOpen}
-        feedback ={feedback}
-        onClose  ={() => setSidebarOpen(false)}
+        isOpen={sidebarOpen}
+        initialAudioReply={initialAudioReply}
+        onClose={handlePanelClose}
+        isCooldown={isCooldown}
+        setIsCooldown={setIsCooldown}
       />
     </LeetcodeProvider>
   );
 };
 
-/* mount */
 const host = document.createElement('div');
 host.id = 'algo-speak-root';
 document.body.appendChild(host);
 createRoot(host).render(<App />);
-
-// console.log('[AlgoSpeak] sending inject-styles');
-// chrome.runtime.sendMessage({ type: 'inject-styles' }, res =>
-//   console.log('[AlgoSpeak] response', res, chrome.runtime.lastError)
-// );
-
-// /* inject the extracted CSS — keep this line */
-// chrome.runtime.sendMessage({ type: 'inject-styles' });

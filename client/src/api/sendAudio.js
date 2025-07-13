@@ -6,7 +6,7 @@ const BACKEND_URL = "http://localhost:5000/api/upload";
 
 export async function sendAudioToBackend(audioBlob) {
   try{
-        const formData = new FormData();
+    const formData = new FormData();
     formData.append('audio', audioBlob, 'recording.webm');
 
     const response = await fetch(BACKEND_URL,{
