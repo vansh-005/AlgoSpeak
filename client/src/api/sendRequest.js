@@ -1,7 +1,14 @@
 const BACKEND_URL = "http://localhost:5000/api/client-upload";
 
+function getLeetCodeSlugFromUrl(url) {
+    const match = url.match(/leetcode\.com\/problems\/([^\/]+)/);
+    return match ? match[1] : null;
+}
+
 export async function sendRequestToBackend(audioBlob,textData){
     try{
+        const url = window.location.href;
+        const slug = getLeetCodeSlugFromUrl(url);
         const { token } = await new Promise(res =>
             chrome.storage.local.get('token', res)
         );
@@ -14,6 +21,12 @@ export async function sendRequestToBackend(audioBlob,textData){
         }
         if(textData){
             formData.append('text',textData);
+        }
+        if(slug){
+            formData.append('slug',slug);
+        }
+        else{
+            console.log("Problem Slug Not given");
         }
         const response = await fetch(BACKEND_URL, {
             method: 'POST',

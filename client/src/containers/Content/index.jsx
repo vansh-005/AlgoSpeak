@@ -23,7 +23,6 @@ const App = () => {
 
     if (result.success && result.data.reply) {
       setSidebarOpen(true);
-      // This triggers FeedbackPanel to inject the AI reply as an initial message
       setInitialAudioReply(result.data.reply);
     } else {
       setSidebarOpen(true);
@@ -31,38 +30,45 @@ const App = () => {
     }
   };
 
+  // --- Toggle-to-talk: Ctrl + Space toggles recording ---
   useEffect(() => {
-    // if (audioUrl) console.log('App: audioUrl set', audioUrl);
-    return () => {
-      if (audioUrl) URL.revokeObjectURL(audioUrl);
-    }
-  }, [audioUrl]);
+    let lastToggle = 0;
+    const TOGGLE_DELAY = 400; // ms to debounce double tap
 
-  useEffect(() => {
-    const handleKeyDown = e => {
-      if (e.code === 'Space' && !e.repeat && !isCooldown) {
-        setIsRecording(true);
-        e.preventDefault();
-      }
-    };
-
-    const handleKeyUp = e => {
-      if (e.code === 'Space' && !isCooldown) {
-        setIsRecording(false);
-        setSidebarOpen(true);
+    const handleKeyDown = (e) => {
+      if (
+        e.code === 'Space' &&
+        e.ctrlKey &&
+        !e.repeat &&
+        !isCooldown
+      ) {
+        const now = Date.now();
+        if (now - lastToggle > TOGGLE_DELAY) {
+          setIsRecording((prev) => {
+            // Open sidebar when stopping recording
+            if (prev) setSidebarOpen(true);
+            return !prev;
+          });
+          lastToggle = now;
+        }
         e.preventDefault();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
     };
   }, [isCooldown]);
 
-  // Reset initialAudioReply once FeedbackPanel is closed or used
+  // --- Clean up audioUrl when unmounting or updating ---
+  useEffect(() => {
+    return () => {
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+  }, [audioUrl]);
+
+  // --- Reset initialAudioReply when FeedbackPanel is closed or used ---
   const handlePanelClose = () => {
     setSidebarOpen(false);
     setInitialAudioReply(null);
