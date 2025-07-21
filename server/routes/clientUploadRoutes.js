@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { transcribeAudio } = require('../utils/transcribe'); 
-
+const {getProblemSummary,fetchLeetCodeProblem} = require('../utils/getProblemSummary')
 const router = express.Router();
 
 const upload = multer({ dest: 'uploads/', limits: { fileSize: 10 * 1024 * 1024 } });
@@ -19,6 +19,13 @@ router.post('/', upload.single('audio'), async (req, res) => {
     if (!userText) {
       return res.status(400).json({ error: 'No audio or text provided.' });
     }
+    // console.log(slug);
+    // Ok so lets start building our perfect prompt here: 
+    // first i need problems context and its metadeta each time so i am storing it in permanent database:
+
+    const summary = getProblemSummary(slug);
+    console.log(summary);
+
     // For now, just echo the resulting text (later, plug in AI/processing)
     return res.json({ reply: userText });
   } catch (err) {

@@ -23,8 +23,8 @@ app.use(helmet());
 
 app.use(cors({
   origin: [
-    "http://localhost:3000", // if you use React dev
-    "jpegdcjffepjnbjpmlgkneghhfangebp", // put your extension ID here
+    "http://localhost:3000", 
+    "jpegdcjffepjnbjpmlgkneghhfangebp",
     "http://localhost:3000",
     "https://leetcode.com",
 
