@@ -1,18 +1,15 @@
+require('global-agent/bootstrap');
 // const LeetCode = (...args) => import('leetcode-query').then(mod => mod.default(...args));
 const {LeetCode} = require('leetcode-query')
 const leetcode  = new LeetCode();
 
+
 async function fetchLeetCodeProblem(slug) {
   try {
     const problem = await leetcode.problem(slug);
-    // // Optional: Strip HTML if you want plain text
-    // const stripHtml = (html) => html.replace(/<[^>]+>/g, '');
-    // console.log(problem);
-    return {
-        problem
-    };
+    return { problem };
   } catch (err) {
-    console.error('LeetCode-query fetch error:', err.message);
+    console.error('LeetCode-query fetch error:', err); // log full error
     throw err;
   }
 }
@@ -43,7 +40,7 @@ function formatLeetCodePrompt(problem) {
             .replace(/&quot;/g, '"')
             .replace(/\n{2,}/g, '\n')
             .trim();
-
+    console.log(problem);
     const title = problem.title;
     const difficulty = problem.difficulty;
     const rawStatement = stripHtml(problem.content || '');
@@ -107,12 +104,14 @@ function formatLeetCodePrompt(problem) {
     return prompt.trim();
 }
 
-
 async function main(slug) {
-    const { problem } = await fetchLeetCodeProblem(slug);
-    const contextPrompt = formatLeetCodePrompt(problem);
-    // Now, send contextPrompt to your LLM
-    console.log(contextPrompt);
+    try {
+        const { problem } = await fetchLeetCodeProblem(slug);
+        const contextPrompt = formatLeetCodePrompt(problem);
+        console.log(contextPrompt);
+    } catch (err) {
+        console.error("Main function error:", err);
+    }
 }
 
 

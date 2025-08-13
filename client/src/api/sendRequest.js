@@ -42,6 +42,7 @@ export async function sendRequestToBackend(audioBlob,textData){
             return { success: false, error: error || `Status ${response.status}` };
         }
         const data = await response.json();
+        // console.log(data);
         return { success: true, data };
     }catch(err){
         return { success: false, error: err.message || "Unknown error" };

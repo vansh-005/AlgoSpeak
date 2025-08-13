@@ -110,30 +110,30 @@ function formatLeetCodePrompt(problem) {
 
 
 async function getProblemSummary(slug){
-    let problem = await Problem.findOne({ slug });
+    let cachedProblem = await Problem.findOne({ slug });
     // Return cached summary if available:
-    if (problem && problem.cachedSummary) {
-        return problem.cachedSummary;
+    if (cachedProblem && cachedProblem.cachedSummary) {
+        return cachedProblem.cachedSummary;
     }
     // Get Details of that problem :
-   const { problemDetails } = await fetchLeetCodeProblem(slug);
-
+   const { problem } = await fetchLeetCodeProblem(slug);
     // // Will Complete this LLM part later once i get deepseek credits:
     // const summary = await llm_summarize(lcDetails);  
 
     // just catch the prompt:
-    const contextPrompt = formatLeetCodePrompt(problemDetails);
+    // console.log(problem);
+    const contextPrompt = formatLeetCodePrompt(problem);
     // Save and Return the details:
-    problem = problem || new Problem({ slug });
-    problem.title = problemDetails.title;
-    problem.description = problemDetails.content;
-    // problem.constraints = problemDetails.constraints;
-    // problem.exampleTestcases = problemDetails.exampleTestcases;
-    problem.cachedSummary = contextPrompt;
-    problem.lastFetched = new Date();
-    await problem.save();
+    let newProblem = cachedProblem || new Problem({ slug });
+    newProblem.title = problem.title;
+    newProblem.description = problem.content;
+    // problem.constraints = problem.constraints;
+    // problem.exampleTestcases = problem.exampleTestcases;
+    newProblem.cachedSummary = contextPrompt;
+    newProblem.lastFetched = new Date();
+    await newProblem.save();
 
-    return summary;
+    return contextPrompt;
 }
 
 module.exports = {getProblemSummary,fetchLeetCodeProblem};
