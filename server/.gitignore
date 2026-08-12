@@ -4,6 +4,7 @@ node_modules/
 # Env files (never commit secrets!)
 .env
 .env.*
+env.yaml
 
 # Logs
 logs/
