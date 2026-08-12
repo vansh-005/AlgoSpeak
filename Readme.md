@@ -87,12 +87,7 @@ Short version, run from the repo root once `gcloud` is installed and
 authenticated:
 
 ```bash
-gcloud run deploy algospeak-backend \
-  --source ./server \
-  --region asia-south1 \
-  --allow-unauthenticated \
-  --set-env-vars GROQ_API_KEY=your-groq-key \
-  --set-env-vars DEEPSEEK_API_KEY=your-deepseek-key
+gcloud run deploy algospeak-backend --source ./server --region asia-south1 --allow-unauthenticated --env-vars-file server/env.yaml                     
 ```
 
 After deploying, update `BACKEND_URL` in `client/src/api/sendAudio.js` and
@@ -103,22 +98,3 @@ The frontend itself is never "deployed" anywhere — Chrome extensions run
 locally in the browser. Publishing to the Chrome Web Store (for other
 people to install it) is a separate, later step.
 
-## Current status / known limitations
-
-- **Auth is disabled.** `middleware/auth.js` currently passes every request
-  through without checking a token. Fine for testing solo; needs real JWT
-  verification restored before sharing this with anyone else, since the
-  backend URL would otherwise be open to whoever finds it.
-- **No conversation memory yet.** Each request is stateless — the backend
-  doesn't yet use Redis to remember earlier turns in the same session, or a
-  vector DB to recall similar past discussions. See the TODOs below.
-- **TTS isn't wired in.** `tts-server/` has early scaffolding for
-  text-to-speech but the main pipeline currently returns text only.
-
-## Roadmap
-
-- [ ] Restore JWT auth before any public sharing
-- [ ] Add conversation history via Redis
-- [ ] Add vector-DB context retrieval (KNN over past sessions)
-- [ ] Wire up text-to-speech for spoken responses
-- [ ] Publish to the Chrome Web Store
