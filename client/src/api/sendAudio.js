@@ -1,7 +1,7 @@
 // src/api/sendAudio.js
 // const BACKEND_PORT = process.env.REACT_APP_BACKEND_PORT || 5000;
 // const BACKEND_URL  = `http://localhost:${BACKEND_PORT}/api/upload`;
-const BACKEND_URL = "http://localhost:5000/api/upload";
+const BACKEND_URL = "https://algospeak-backend-1032456566706.asia-south1.run.app/api/upload";
 
 
 export async function sendAudioToBackend(audioBlob) {

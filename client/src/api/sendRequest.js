@@ -1,4 +1,4 @@
-const BACKEND_URL = "http://localhost:5000/api/client-upload";
+const BACKEND_URL = "https://algospeak-backend-1032456566706.asia-south1.run.app/api/client-upload";
 
 function getLeetCodeSlugFromUrl(url) {
     const match = url.match(/leetcode\.com\/problems\/([^\/]+)/);
