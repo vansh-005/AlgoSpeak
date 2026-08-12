@@ -1,41 +1,30 @@
 // utils/transcribe.js
-const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
-const ffmpeg = require('fluent-ffmpeg');
+const OpenAI = require('openai');
 const fs = require('fs');
-const axios = require('axios');
-const FormData = require('form-data');
 
-ffmpeg.setFfmpegPath(ffmpegPath);
+// Hosted speech-to-text via Groq — OpenAI-compatible endpoint running
+// whisper-large-v3-turbo. Fast and has a solid free tier, good fit for a
+// basic version. No ffmpeg conversion needed: Groq (like OpenAI) accepts
+// webm directly.
+//
+// To use OpenAI's own Whisper API instead, this is the only bit that
+// changes: baseURL: 'https://api.openai.com/v1', and OPENAI_API_KEY.
+const groq = new OpenAI({
+  baseURL: 'https://api.groq.com/openai/v1',
+  apiKey: process.env.GROQ_API_KEY,
+});
 
-async function transcribeAudio(webmPath) {
-  const wavPath = webmPath + '.wav';
+async function transcribeAudio(filePath) {
   try {
-    // Convert to WAV
-    await new Promise((resolve, reject) => {
-      ffmpeg(webmPath)
-        .toFormat('wav')
-        .on('end', resolve)
-        .on('error', reject)
-        .save(wavPath);
+    const transcription = await groq.audio.transcriptions.create({
+      file: fs.createReadStream(filePath),
+      model: 'whisper-large-v3-turbo',
     });
 
-    // Send to Whisper server
-    const formData = new FormData();
-    formData.append('file', fs.createReadStream(wavPath));
-    const whisperRes = await axios.post('http://localhost:8080/inference', formData, {
-      headers: formData.getHeaders(),
-      maxBodyLength: Infinity
-    });
-
-    // Cleanup
-    fs.unlinkSync(webmPath);
-    fs.unlinkSync(wavPath);
-    const text = whisperRes.data.text || whisperRes.data;
-    // console.log(text);
-    return whisperRes.data.text || whisperRes.data;
+    fs.unlinkSync(filePath);
+    return transcription.text;
   } catch (err) {
-    if (fs.existsSync(webmPath)) fs.unlinkSync(webmPath);
-    if (fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     throw new Error('Transcription failed: ' + err.message);
   }
 }

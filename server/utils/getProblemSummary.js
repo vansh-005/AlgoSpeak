@@ -1,36 +1,37 @@
+const mongoose = require('mongoose');
 const Problem = require('../models/Problem')
 const {LeetCode} = require('leetcode-query')
 const leetcode  = new LeetCode();
 
 async function fetchLeetCodeProblem(slug) {
-  try {
-    const problem = await leetcode.problem(slug);
-    // // Optional: Strip HTML if you want plain text
-    // const stripHtml = (html) => html.replace(/<[^>]+>/g, '');
-    // console.log(problem);
-    return {
-        problem
-    };
-  } catch (err) {
-    console.error('LeetCode-query fetch error:', err.message);
-    throw err;
-  }
+    try {
+        const problem = await leetcode.problem(slug);
+        // // Optional: Strip HTML if you want plain text
+        // const stripHtml = (html) => html.replace(/<[^>]+>/g, '');
+        // console.log(problem);
+        return {
+            problem
+        };
+    } catch (err) {
+        console.error('LeetCode-query fetch error:', err.message);
+        throw err;
+    }
 }
 
 function prettyNumber(str) {
     // Converts 10^4 to 10000, 10^9 to 1000000000, etc.
     return str.replace(/10\^4/g, "10000")
-              .replace(/10\^5/g, "100000")
-              .replace(/10\^6/g, "1000000")
-              .replace(/10\^7/g, "10000000")
-              .replace(/10\^8/g, "100000000")
-              .replace(/10\^9/g, "1000000000")
-              .replace(/1e4/g, "10000")
-              .replace(/1e5/g, "100000")
-              .replace(/1e6/g, "1000000")
-              .replace(/1e7/g, "10000000")
-              .replace(/1e8/g, "100000000")
-              .replace(/1e9/g, "1000000000");
+        .replace(/10\^5/g, "100000")
+        .replace(/10\^6/g, "1000000")
+        .replace(/10\^7/g, "10000000")
+        .replace(/10\^8/g, "100000000")
+        .replace(/10\^9/g, "1000000000")
+        .replace(/1e4/g, "10000")
+        .replace(/1e5/g, "100000")
+        .replace(/1e6/g, "1000000")
+        .replace(/1e7/g, "10000000")
+        .replace(/1e8/g, "100000000")
+        .replace(/1e9/g, "1000000000");
 }
 
 function formatLeetCodePrompt(problem) {
@@ -110,28 +111,29 @@ function formatLeetCodePrompt(problem) {
 
 
 async function getProblemSummary(slug){
-    let cachedProblem = await Problem.findOne({ slug });
-    // Return cached summary if available:
-    if (cachedProblem && cachedProblem.cachedSummary) {
-        return cachedProblem.cachedSummary;
-    }
-    // Get Details of that problem :
-   const { problem } = await fetchLeetCodeProblem(slug);
-    // // Will Complete this LLM part later once i get deepseek credits:
-    // const summary = await llm_summarize(lcDetails);  
+    // Only touch Mongo if a connection is actually up — lets this work
+    // without MONGO_URI configured, just without caching.
+    const dbReady = mongoose.connection.readyState === 1;
 
-    // just catch the prompt:
-    // console.log(problem);
+    if (dbReady) {
+        const cachedProblem = await Problem.findOne({ slug });
+        if (cachedProblem && cachedProblem.cachedSummary) {
+            return cachedProblem.cachedSummary;
+        }
+    }
+
+    // Get Details of that problem :
+    const { problem } = await fetchLeetCodeProblem(slug);
     const contextPrompt = formatLeetCodePrompt(problem);
-    // Save and Return the details:
-    let newProblem = cachedProblem || new Problem({ slug });
-    newProblem.title = problem.title;
-    newProblem.description = problem.content;
-    // problem.constraints = problem.constraints;
-    // problem.exampleTestcases = problem.exampleTestcases;
-    newProblem.cachedSummary = contextPrompt;
-    newProblem.lastFetched = new Date();
-    await newProblem.save();
+
+    if (dbReady) {
+        let newProblem = (await Problem.findOne({ slug })) || new Problem({ slug });
+        newProblem.title = problem.title;
+        newProblem.description = problem.content;
+        newProblem.cachedSummary = contextPrompt;
+        newProblem.lastFetched = new Date();
+        await newProblem.save();
+    }
 
     return contextPrompt;
 }
